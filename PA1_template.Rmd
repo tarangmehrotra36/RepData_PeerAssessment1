@@ -1,0 +1,116 @@
+---
+title: 'Reproducible research : Course Project 1'
+author: "Tarang Mehrotra"
+date: "June 25, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+Loading and preprocessing the data: We change the date column from Factor to date class.
+
+```{r}
+features <- read.csv('./activity.csv', header = T, sep = ',')
+
+str(features)
+
+features$date<-as.Date(features$date,"%m/%d/%Y")
+
+str(features)
+
+
+```
+
+## Including Plots
+
+For calculating the total steps, date-wise after ignoring missing values.
+
+```{r  echo=TRUE}
+
+features1<-features[which(!(is.na(features$steps))),]
+
+steps_total<-tapply(features1$steps,features1$date,sum)
+
+```
+
+Histogram of the total number of steps taken each day:
+```{r fig.height=7,echo=TRUE}
+hist(steps_total,main="Histogram of total number of steps per day")
+```
+
+To Calculate and report the mean and median of the total number of steps taken per day
+
+Median:
+```{r echo=TRUE}
+summary(steps_total)[3]
+```
+
+Mean:
+```{r echo=TRUE}
+summary(steps_total)[4]
+```
+
+Time series plot(type="l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days:
+
+```{r fig.height=7, echo=TRUE}
+steps_mean_interval<-tapply(features1$steps,features1$interval,mean)
+
+plot(steps_mean_interval, type='l', 
+     main="Average number of steps per interval for all days", xlab="Interval", 
+     ylab="Average number of steps")
+```
+
+Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+which.max(steps_mean_interval)
+```
+
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r}
+is.na(features)
+
+sum(is.na(features))
+```
+
+Create a new dataset that is equal to the original dataset but with the missing data filled in with the average value of that interval:
+
+```{r warning=FALSE}
+
+features3<-features
+
+features3$steps[which((is.na(features3$steps)))] <- steps_mean_interval[which((is.na(features3$steps)))%%nrow(steps_mean_interval)]
+ 
+steps_total_after_missing<-tapply(features3$steps,features3$date,sum)
+
+steps_total_after_missing
+```
+
+Histogram of the new data with missing values replaced.
+
+```{r}
+hist(steps_total_after_missing,main="Histogram of total number of steps per day")
+```
+
+Mean and Median of the new data set:
+
+```{r}
+summary(steps_total_after_missing)
+```
+
+Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends:
+
+```{r fig.height=8}
+x<-(weekdays(features3$date,abbr = T ))
+x<-gsub("S(at|un)","Weekend",x)
+x<-gsub("Mon|Tue|Wed|Thu|Fri","Weekday",x)
+
+features3$day<-as.factor(x)
+
+avg_step_imp <- aggregate(steps ~ interval + day, data = features3, mean)
+
+xyplot(steps~interval|day,data=avg_step_imp,layout(1,2),type = "l")
+```
